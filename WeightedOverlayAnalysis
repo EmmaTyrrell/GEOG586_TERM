@@ -1,0 +1,160 @@
+# By Emma Tyrrell
+
+# import modules
+import arcpy
+from arcpy.sa import *
+from datetime import timedelta
+from datetime import datetime as dt
+print("modules imported")
+
+# establish master parameters
+print("establishing parameters ... ")
+arcpy.env.workspace = "C:\\Users\\Emma Tyrrell\\Documents\\PSU_SDS\\THESIS_230226\\Data\\WorkingData"
+outputGDB = r"C:\Users\Emma Tyrrell\OneDrive\Documents\PSU_SDS\GEOG_586\FinalProject\OutHRRRData"
+gdbName = "C:\\Users\\Emma Tyrrell\\Documents\\PSU_SDS\\THESIS_230226\\Data\\StaticDataGDB.gdb"
+avyGDB = "C:\\Users\\Emma Tyrrell\\Documents\\PSU_SDS\\THESIS_230226\\Data\\WorkingData\\AvalancheFiles.gdb"
+HRRRData = r"C:\Users\Emma Tyrrell\OneDrive\Documents\PSU_SDS\GEOG_586\FinalProject\HRRRData"
+forecastingWorkspace = arcpy.env.workspace + "\\ForecastingData"
+GCSsr = arcpy.SpatialReference(4326)
+PCSsr = arcpy.SpatialReference(6431)
+arcpy.env.overwriteOutput = True
+arcpy.env.qualifiedFieldNames = False
+UTCtimeConversion = timedelta(hours=-7)
+forSharing = "C:\\Users\\Emma Tyrrell\\Documents\\PSU_SDS\\THESIS_230226\\Data\\WorkingData\\ForSharing"
+avalanchePolygonPaths = "C:\\Users\\Emma Tyrrell\\Documents\\PSU_SDS\\THESIS_230226\\Data\\WorkingData\\AvalancheFiles.gdb\\AvyPathPolygon_Point"
+AvyPaths = "C:\\Users\\Emma Tyrrell\\Documents\\PSU_SDS\\THESIS_230226\\Data\\WorkingData\\AvalancheFiles.gdb\\AvyPathPolygons"
+demMosaic = gdbName + "\\demMosaic2"
+print("parameters established.")
+
+# sample variables
+date = "2023-01-17"
+date_object = dt.strptime(date, "%Y-%m-%d")
+startPoint = date_object
+endDay0 = str(startPoint).replace("00:00:00", "23:59:59.914")
+startPoint_HRRR = (str(startPoint).replace(" ", "T"))
+endDay0_HRRR = (str(endDay0).replace(" ", "T"))
+startDay1 = startPoint + timedelta(days=-1)
+endDay1 = str(startDay1).replace("00:00:00", "23:59:59.914")
+startDay1_HRRR = (str(startDay1).replace(" ", "T"))
+endDay1_HRRR = (str(endDay1).replace(" ", "T"))
+startDay2 = startPoint + timedelta(days=-2)
+endDay2 = str(startDay2).replace("00:00:00", "23:59:59.914")
+startDay2_HRRR = (str(startDay2).replace(" ", "T"))
+endDay2_HRRR = (str(endDay2).replace(" ", "T"))
+print("date prepared for sampling")
+
+## create directory for new files
+
+# subset day in question and subset up to two days prior
+gustData = r"C:\Users\Emma Tyrrell\OneDrive\Documents\PSU_SDS\GEOG_586\FinalProject\HRRRData\2023gustMaxAggregate.crf"
+windData = r"C:\Users\Emma Tyrrell\OneDrive\Documents\PSU_SDS\GEOG_586\FinalProject\HRRRData\2023windMeanAggregate.crf"
+snowData = r"C:\Users\Emma Tyrrell\OneDrive\Documents\PSU_SDS\GEOG_586\FinalProject\HRRRData\2023snowSumAggregate.crf"
+
+print("subsetting for day of")
+arcpy.SubsetMultidimensionalRaster_md(gustData, outputGDB + rf"\gustData_{date}_dayOf.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startPoint_HRRR, endDay0_HRRR, 1, "YEARS")
+arcpy.SubsetMultidimensionalRaster_md(windData, outputGDB + rf"\windData_{date}_dayOf.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startPoint_HRRR, endDay0_HRRR, 1, "YEARS")
+arcpy.SubsetMultidimensionalRaster_md(snowData, outputGDB + rf"\snowData_{date}_dayOf.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startPoint_HRRR, endDay0_HRRR, 1, "YEARS")
+
+print("subsetting for day 1 prior")
+arcpy.SubsetMultidimensionalRaster_md(gustData, outputGDB + rf"\gustData_{date}_day1.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startDay1_HRRR, endDay1_HRRR, 1, "YEARS")
+arcpy.SubsetMultidimensionalRaster_md(windData, outputGDB + rf"\windData_{date}_day1.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startDay1_HRRR, endDay1_HRRR, 1, "YEARS")
+arcpy.SubsetMultidimensionalRaster_md(snowData, outputGDB + rf"\snowData_{date}_day1.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startDay1_HRRR, endDay1_HRRR, 1, "YEARS")
+
+print("subsetting for day 2 prior")
+arcpy.SubsetMultidimensionalRaster_md(gustData, outputGDB + rf"\gustData_{date}_day2.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startDay2_HRRR, endDay2_HRRR, 1, "YEARS")
+arcpy.SubsetMultidimensionalRaster_md(windData, outputGDB + rf"\windData_{date}_day2.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startDay2_HRRR, endDay2_HRRR, 1, "YEARS")
+arcpy.SubsetMultidimensionalRaster_md(snowData, outputGDB + rf"\snowData_{date}_day2.crf", "",
+                                      "BY_ITERATION", "", "",
+                                      "StdTime", startDay2_HRRR, endDay2_HRRR, 1, "YEARS")
+print("subsetting done")
+
+# times the snow file by 10
+snowTimesDayOf = Times(outputGDB + rf"\snowData_{date}_dayOf.crf", 10)
+snowTimesDayOf.save(outputGDB + rf"\snowData_{date}_Times_dayOf.crf")
+print("snow file day of multiplied by 10")
+
+snowTimesDay1 = Times(outputGDB + rf"\snowData_{date}_day1.crf", 10)
+snowTimesDay1.save(outputGDB + rf"\snowData_{date}_Times_day1.crf")
+print("snow file day 1 multiplied by 10")
+
+snowTimesDay2 = Times(outputGDB + rf"\snowData_{date}_day2.crf", 10)
+snowTimesDay2.save(outputGDB + rf"\snowData_{date}_Times_day2.crf")
+print("snow file day 2 multiplied by 10")
+
+# convert to tifs
+arcpy.env.workspace = outputGDB
+files = arcpy.ListFiles()
+for file in files:
+    if file.endswith(".crf"):
+        arcpy.RasterToOtherFormat_conversion(file, outputGDB, "TIFF")
+print("files converted to tifs")
+
+## Convert file to integers
+arcpy.env.workspace = outputGDB
+files = arcpy.ListFiles()
+for file in files:
+    if file.endswith(".tif"):
+        IntFile = Int(file)
+        IntFile.save(rf"{file[:-4]}_Int.tif")
+
+# add overlay based on maximum value + 10%
+inWeightedOL = WeightedOverlay(WOTable([[outputGDB + rf"\snowData_{date}_Times_dayOf_Int.tif", 55, "VALUE", RemapValue([[0, 1], [1, 1],
+                                        [2, 1], [3, 1], [4, 2], [5, 2], [6, 2], [7, 3], [8, 3], [9, 4], [10, 4], [11, 5], [12, 5], [13, 5], [14, 6], [15, 6],
+                                        [16, 6], [17, 6], [18, 7], [19, 7], [20, 7], [21, 8], [22, 8], [23, 8], [24, 9], [25, 9], [26, 9], [27, 9], [28, 10], [29, 10], [30, 10],
+                                        [31, 10], [32, 10], [33, 10]])],
+                                        [[outputGDB + rf"\gustData_{date}_dayOf_Int.tif", 25, "VALUE", RemapValue([[0, 1], [1, 1],
+                                         [2, 1], [3, 1], [4, 2], [5, 2], [6, 2], [7, 2], [8, 3], [9, 3], [10, 3], [11, 3], [12, 4], [13, 4], [14, 4], [15, 5],
+                                         [16, 5], [17, 5], [18, 6], [19, 6], [20, 7], [21, 7], [22, 8], [23, 8], [24, 9], [25, 9], [26, 10], [27, 10], [28, 10], [29, 10]])]],
+                                        [[outputGDB + rf"\windData_{date}_dayOf_Int.tif", 20, "VALUE", RemapValue([[0, 1], [1, 1],
+                                         [2, 2], [3, 2], [4, 3], [5, 3], [6, 4], [7, 5], [8, 5], [9, 6], [10, 6], [11, 7],
+                                         [12, 8], [13, 9], [14, 10]])]]], [1, 10, 1]))
+inWeightedOL.save(outputGDB + rf"\WeightedRisk{date}_Day0.tif")
+print("weighted overlay completed day of")
+
+inWeightedOL = WeightedOverlay(WOTable([[outputGDB + rf"\snowData_{date}_Times_day1_Int.tif", 50, "VALUE", RemapValue([[0, 1], [1, 1],
+                                        [2, 1], [3, 1], [4, 2], [5, 2], [6, 2], [7, 3], [8, 3], [9, 4], [10, 4], [11, 5], [12, 5], [13, 5], [14, 6], [15, 6],
+                                        [16, 6], [17, 6], [18, 7], [19, 7], [20, 7], [21, 8], [22, 8], [23, 8], [24, 9], [25, 9], [26, 9], [29, 10], [30, 10],
+                                        [31, 10], [32, 10], [33, 10]])],
+                                        [[outputGDB + rf"\gustData_{date}_day1_Int.tif", 26, "VALUE", RemapValue([[0, 1], [1, 1],
+                                         [2, 1], [3, 1], [4, 2], [5, 2], [6, 2], [7, 2], [8, 3], [9, 3], [10, 3], [11, 3], [12, 4], [13, 4], [14, 4], [15, 5],
+                                         [16, 5], [17, 6], [18, 6], [19, 7], [20, 8], [21, 8], [22, 9], [23, 10]])]],
+                                        [[outputGDB + rf"\windData_{date}_day1_Int.tif", 24, "VALUE", RemapValue([[0, 1], [1, 1],
+                                         [2, 2], [3, 2], [4, 3], [5, 4], [6, 4], [7, 5], [8, 5], [9, 7], [10, 8], [11, 9],
+                                         [12, 10]])]]], [1, 10, 1]))
+inWeightedOL.save(outputGDB + rf"\WeightedRisk{date}_Day1.tif")
+print("weighted overlay completed day 1")
+
+inWeightedOL = WeightedOverlay(WOTable([[outputGDB + rf"\snowData_{date}_Times_day2_Int.tif", 24, "VALUE", RemapValue([[0, 1], [1, 1],
+                                        [2, 2], [3, 3], [4, 4], [5, 4], [6, 5], [7, 5], [8, 5], [9, 5], [10, 6], [11, 6], [12, 6], [13, 6], [14, 7], [15, 7],
+                                        [16, 7], [17, 7], [18, 7], [19, 8], [20, 8], [21, 8], [22, 8], [23, 8], [24, 9], [25, 9], [26, 9], [27, 9], [28, 9], [29, 9], [30, 10],
+                                        [31, 10], [32, 10]])],
+                                        [[outputGDB + rf"\gustData_{date}_day2_Int.tif", 32, "VALUE", RemapValue([[0, 1], [1, 1],
+                                         [2, 1], [3, 1], [4, 1], [5, 2], [6, 2], [7, 2], [8, 3], [9, 3], [10, 3], [11, 4], [12, 4], [13, 4], [14, 5], [15, 5],
+                                         [16, 6], [17, 6], [18, 7], [19, 8], [20, 9], [21, 10]])]],
+                                        [[outputGDB + rf"\windData_{date}_day2_Int.tif", 44, "VALUE", RemapValue([[0, 1], [1, 1],
+                                         [2, 2], [3, 3], [4, 4], [5, 5], [6, 5], [7, 6], [8, 7], [9, 8], [10, 10]])]]], [1, 10, 1]))
+inWeightedOL.save(outputGDB + rf"\WeightedRisk{date}_Day2.tif")
+print("weighted overlay completed day 2")
+
+arcpy.env.workspace = outputGDB
+files = arcpy.ListFiles()
+for file in files:
+    if file.endswith(".crf"):
+        arcpy.Delete_management(file)
+print("deleted crf files")
